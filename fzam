@@ -23,12 +23,23 @@ FMENU="fzf --layout=reverse \
            --bind change:top \
            --prompt"
 
+# Directories. A slash (/) at the end of every variable here is very important.
+# Not having one will break the script.
+
+# Directory where AppImages are placed.
 APPIMAGEDIR="$HOME/Applications/"
+
+# Directory where icons are placed
+APPIMAGEICONDIR="${APPIMAGEDIR}/.icons/"
+
+# Directory where desktop entries are placed in order for desktop environments to find them.
+# I recommend ~/.local/share/applications for a single user and /usr/local/share/applications for every user of the system.
+AMDESKTOPDIR="$HOME/.local/share/applications/" 
 verbose=0
 
 # Functions
 amintegrate() {
-    selection=$(find $HOME \( -path $HOME/Applications -o -path $HOME/AppImages -o -path $HOME/.local/share/Trash -o -path $HOME/.cache \) -prune -o -type f -iname *.AppImage -print | ${FMENU} "Please type the location of the AppImage: ") 
+    selection=$(find $HOME \( -path ${APPIMAGEDIR::-1} -o -path $HOME/.local/share/Trash -o -path $HOME/.cache \) -prune -o -type f -iname *.AppImage -print | ${FMENU} "Please type the location of the AppImage: ") 
     if [ -n $selection ]; then
 	## AppImage
 	chmod +x $selection
@@ -45,10 +56,10 @@ amintegrate() {
 	iconfmt="$(file ${icon} | awk '{print $2}' | tr 'A-Z' 'a-z')"
 	[[ "$verbose" -eq 1 ]] && echo "Icon format is: $iconfmt"
 
-	cp -i ${icon} $HOME/Applications/.icons/${amname}.${iconfmt} || echo "Could not copy icon file"
+	cp -i ${icon} ${APPIMAGEICONDIR}${amname}.${iconfmt} || echo "Could not copy icon file"
 	[[ "$verbose" -eq 1 ]] && echo "Copied icon file to $HOME/Applications/.icons"
 
-	amicon="$(find $HOME/Applications/.icons/ -type f -iname "*${amname}*")"
+	amicon="$(find ${APPIMAGEICONDIR} -type f -iname "*${amname}*")"
 
 	## AppImage .desktop file
 	finddesktop="$(find ./squashfs-root/ -maxdepth 1 -iname "*.desktop" | xargs -I {} readlink -f {})"
@@ -57,11 +68,12 @@ amintegrate() {
 	    [[ "$verbose" -eq 1 ]] && echo "Found .desktop file as $desktopfile"
 	    
 	    sed -i "/Exec/s#${amname}#${amlocation}#I" $desktopfile
+	    sed -i "/Exec/s#AppRun#${amlocation}#I" $desktopfile
 	    sed -i "/Icon/s#=.*#=${amicon}#I" $desktopfile
 	    [[ "$verbose" -eq 1 ]] && echo "All sed substitutions were done."
 	    
-	    cp -i "${desktopfile}" $HOME/.local/share/applications/ || echo "Could not copy .desktop file"
-	    [[ "$verbose" -eq 1 ]] && echo "Copied .desktop file to $HOME/.local/share/applications"
+	    cp -i "${desktopfile}" $AMDESKTOPDIR || echo "Could not copy .desktop file"
+	    [[ "$verbose" -eq 1 ]] && echo "Copied .desktop file to $AMDESKTOPDIR"
 	done
 	
 	[[ -d "./squashfs-root" ]] && rm -rf squashfs-root
@@ -75,7 +87,7 @@ amintegrate() {
 
 amdelete() {
     selectiondel=""
-    if [[ -d "${APPIMAGEDIR}" ]] && [[ -n "$(\ls "${APPIMAGEDIR}")" ]]; then
+    if [[ -d "${APPIMAGEDIR}" ]] && [[ -d "${APPIMAGEICONDIR}" ]] && [[ -n "$(\ls "${APPIMAGEDIR}")" ]]; then
         selectiondel="$(printf '%s\n' $(ls "${APPIMAGEDIR}") | ${FMENU} "Choose an AppImage to remove: ")"
         amname="$(awk -F '.' '{print $1}' <<< ${selectiondel})"
 
@@ -88,11 +100,11 @@ amdelete() {
                 rm "${APPIMAGEDIR}${selectiondel}" || echo "${selectiondel} was not found."
                 [[ "$verbose" -eq 1 ]] && echo "Deleted AppImage: ${selectiondel}"
 
-		founddesktop="$HOME/.local/share/applications/${amname}.desktop"
+		founddesktop="${AMDESKTOPDIR}${amname}.desktop"
                 [[ -f $founddesktop ]] && rm $founddesktop || echo "${amname}.desktop was not found."
                 [[ "$verbose" -eq 1 ]] && echo "Deleted AppImage .desktop file"
 
-		foundicon="$(find $HOME/Applications/.icons/ -type f -iname "${amname}*")"
+		foundicon="$(find ${APPIMAGEICONDIR} -type f -iname "${amname}*")"
                 [[ -n $foundicon ]] && rm $foundicon || echo "No icon was found."
                 [[ "$verbose" -eq 1 ]] && echo "Deleted icon"
 
@@ -123,7 +135,7 @@ amedit() {
                 echo "To override this run fzam like this: \$ EDITOR=PROGRAM fzam"
                 touch $HOME/.cache/fzam-edit
         fi
-        choice=$(grep -r -m 1 "\.AppImage" ~/.local/share/applications/ | sort | awk -F ":" '{print $1}' | ${FMENU} "Choose an AppImage entry to edit.")
+        choice=$(grep -r -m 1 "\.AppImage" $AMDESKTOPDIR | sort | awk -F ":" '{print $1}' | ${FMENU} "Choose an AppImage entry to edit.")
         if [ -n $choice ]; then
                 $EDITOR $choice
         fi
@@ -133,6 +145,14 @@ _checks() {
     if [ ! -d $APPIMAGEDIR ]; then
 	echo "$APPIMAGEDIR directory does not exist. Creating it."
 	mkdir $APPIMAGEDIR
+    fi
+    if [ ! -d $APPIMAGEICONDIR ]; then
+	echo "$APPIMAGEICONDIR directory does not exist. Creating it."
+	mkdir $APPIMAGEICONDIR
+    fi
+    if [ ! -d $AMDESKTOPDIR ]; then
+	echo "$AMDESKTOPDIR directory does not exist. Creating it."
+	mkdir $AMDESKTOPDIR
     fi
     if ! grep -q /home/john/Applications <<< $PATH; then
 	echo "$HOME/Applications is not set in the PATH variable."
