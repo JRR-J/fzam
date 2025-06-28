@@ -1,5 +1,3 @@
-#+TITLE: FZAM README
-
 * FZAM | Fuzzy AppImage Manager
 *WARNING: I am not responsible for any AppImage that is integrated to the system using fzam and it is malware.*
 
@@ -14,17 +12,17 @@ change them from the script itself.
 Note that the user might need to edit the desktop entry of the AppImage in case of any errors.
 
 * Depedencies
-fzf
-xargs
-file (Some distributions include it by default but not every single one, for example Arch)
-tree (Same reason as above)
+- fzf
+- xargs
+- file (Some distributions include it by default but not every single one, for example Arch)
+- tree (Same reason as above)
 
 * Installation
 Simply download the script from the repository, make the script executable (chmod +x fzam) and place it somewhere on your system. (For example ~/.local/bin)
 
 * Features
 - Integrate AppImages
-- Deleting AppImages
+- Delete AppImages
 - List all installed AppImages
 
 * Features that may or may not be added
