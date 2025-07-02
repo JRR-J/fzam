@@ -191,7 +191,7 @@ EOF
 
 _maincmd() {
     tput setaf 3 bold
-    printf "What do you like to do?"
+    echo "What would you like to do?"
     tput sgr0
     options=(
 	"Install/Integrate an AppImage"
