@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 
 # FZAM - Fuzzy AppImage Manager | Manage AppImages on Linux.
-# Depedencies: coreutils, fzf, file, tree
+# Depedencies: fzf, file, tree
 # LICENSE: GNU General Public License v3.
 
 # NOTE: The script and / or the author of the script do not take responsibility for any malware distributed as an AppImage.
@@ -30,7 +30,7 @@ FMENU="fzf --layout=reverse \
 APPIMAGEDIR="$HOME/Applications/"
 
 # Directory where icons are placed
-APPIMAGEICONDIR="${APPIMAGEDIR}/.icons/"
+APPIMAGEICONDIR="${APPIMAGEDIR}.icons/"
 
 # Directory where desktop entries are placed in order for desktop environments to find them.
 # I recommend ~/.local/share/applications for a single user and /usr/local/share/applications for every user of the system.
@@ -39,15 +39,27 @@ verbose=0
 
 # Functions
 amintegrate() {
-    selection=$(find $HOME \( -path ${APPIMAGEDIR::-1} -o -path $HOME/.local/share/Trash -o -path $HOME/.cache \) -prune -o -type f -iname *.AppImage -print | ${FMENU} "Please type the location of the AppImage: ") 
-    if [ -n $selection ]; then
+    selection=$(find $HOME \( -path ${APPIMAGEDIR::-1} -o -path $HOME/.local/share/Trash -o -path $HOME/.cache \) -prune -o -type f -iname "*.AppImage" -print | ${FMENU} "Please type the location of the AppImage: ") 
+    if [ -n "$selection" ]; then
 	## AppImage
-	chmod +x $selection
-	amname="$(basename $selection | tr 'A-Z' 'a-z' | awk -F '-' '{print $1}' | sed 's#.AppImage##I')"
-	amlocation="${APPIMAGEDIR}${amname}.AppImage"
-	mv ${selection} ${amlocation}
 	
-	${amlocation} --appimage-extract > /dev/null
+	# Check if selection is an AppImage
+	amformat=$(file "${selection}" | awk -F ',' '{print $1}' | sed "s#${selection}: ##")
+	case $amformat in
+	    "ELF 64-bit LSB pie executable"|"ELF 64-bit LSB executable")
+		echo "This file is an AppImage."
+		;;
+	    *)
+		echo "This file is not an AppImage."
+		exit 1
+		;;
+        esac
+	chmod +x "$selection"
+	amname="$(basename "$selection" | tr 'A-Z' 'a-z' | awk -F '-' '{print $1}' | sed 's#.AppImage##I')"
+	amlocation="${APPIMAGEDIR}${amname}.AppImage"
+	mv -i "${selection}" ${amlocation}
+	
+	"${amlocation}" --appimage-extract || { echo "This is not a Type 2 AppImage"; exit 1; }
 
 	## AppImage Icon
 	icon="$(readlink -f squashfs-root/.DirIcon)"
@@ -235,6 +247,7 @@ main() {
 		;;
 	    -d | --debug)
 		verbose=1
+		echo "Running in debug / verbose mode."
 		_maincmd
 		;;
 	    -v | --version)
@@ -242,6 +255,7 @@ main() {
 		;;
 	    *)
 		echo "Unknown argument: $1"
+		_help
 		;;
 	esac
     fi
