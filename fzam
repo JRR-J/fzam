@@ -47,31 +47,36 @@ amintegrate() {
 	amformat=$(file "${selection}" | awk -F ',' '{print $1}' | sed "s#${selection}: ##")
 	case $amformat in
 	    "ELF 64-bit LSB pie executable"|"ELF 64-bit LSB executable")
-		echo "This file is an AppImage."
-		;;
+                echo "This file is an AppImage."
+                ;;
 	    *)
-		echo "This file is not an AppImage."
-		exit 1
-		;;
-        esac
+                echo "This file is not an AppImage."
+                exit 1
+                ;;
+    esac
 	chmod +x "$selection"
 	amname="$(basename "$selection" | tr 'A-Z' 'a-z' | awk -F '-' '{print $1}' | sed 's#.AppImage##I')"
 	amlocation="${APPIMAGEDIR}${amname}.AppImage"
 	mv -i "${selection}" ${amlocation}
 	
-	"${amlocation}" --appimage-extract || { echo "This is not a Type 2 AppImage"; exit 1; }
+	${amlocation} --appimage-extract > /dev/null || { echo "This is not a Type 2 AppImage"; exit 1; }
 
 	## AppImage Icon
-	icon="$(readlink -f squashfs-root/.DirIcon)"
-	[[ "$verbose" -eq 1 ]] && echo "Found icon as $icon"
+	if [[ -n "$(readlink -f squashfs-root/.DirIcon)" ]]; then
+	    icon="$(readlink -f squashfs-root/.DirIcon)"
+	    [[ "$verbose" -eq 1 ]] && echo "Found icon as $icon"
 
-	iconfmt="$(file ${icon} | awk '{print $2}' | tr 'A-Z' 'a-z')"
-	[[ "$verbose" -eq 1 ]] && echo "Icon format is: $iconfmt"
+	    iconfmt="$(file ${icon} | awk '{print $2}' | tr 'A-Z' 'a-z')"
+	    [[ "$verbose" -eq 1 ]] && echo "Icon format is: $iconfmt"
 
-	cp -i ${icon} ${APPIMAGEICONDIR}${amname}.${iconfmt} || echo "Could not copy icon file"
-	[[ "$verbose" -eq 1 ]] && echo "Copied icon file to $HOME/Applications/.icons"
-
-	amicon="$(find ${APPIMAGEICONDIR} -type f -iname "*${amname}*")"
+	    cp -i ${icon} ${APPIMAGEICONDIR}${amname}.${iconfmt} || echo "Could not copy icon file"
+	    [[ "$verbose" -eq 1 ]] && echo "Copied icon file to $HOME/Applications/.icons"
+	    
+	    amicon="$(find ${APPIMAGEICONDIR} -type f -iname "*${amname}*")"
+	else
+	    echo "Could not find icon."
+	    amicon="appimage"
+	fi
 
 	## AppImage .desktop file
 	finddesktop="$(find ./squashfs-root/ -maxdepth 1 -iname "*.desktop" | xargs -I {} readlink -f {})"
@@ -99,9 +104,9 @@ amintegrate() {
 
 amdelete() {
     selectiondel=""
-    if [[ -d "${APPIMAGEDIR}" ]] && [[ -d "${APPIMAGEICONDIR}" ]] && [[ -n "$(\ls "${APPIMAGEDIR}")" ]]; then
-        selectiondel="$(printf '%s\n' $(ls "${APPIMAGEDIR}") | ${FMENU} "Choose an AppImage to remove: ")"
-        amname="$(awk -F '.' '{print $1}' <<< ${selectiondel})"
+    if [[ -d "${APPIMAGEDIR}" ]] && [[ -d "${APPIMAGEICONDIR}" ]]; then
+        selectiondel="$(printf '%s\n' $(find "${APPIMAGEDIR}" -type f -iname "*.AppImage" | xargs -I {} basename {} | sort) | ${FMENU} "Choose an AppImage to remove: ")"
+        amname="$(basename -s AppImage ${selectiondel})"
 
         tput setaf 1 bold
         read -p "${selectiondel} will be uninstalled. Are you sure? [y/N] "
@@ -112,10 +117,15 @@ amdelete() {
                 rm "${APPIMAGEDIR}${selectiondel}" || echo "${selectiondel} was not found."
                 [[ "$verbose" -eq 1 ]] && echo "Deleted AppImage: ${selectiondel}"
 
-		founddesktop="${AMDESKTOPDIR}${amname}.desktop"
-                [[ -f $founddesktop ]] && rm $founddesktop || echo "${amname}.desktop was not found."
-                [[ "$verbose" -eq 1 ]] && echo "Deleted AppImage .desktop file"
-
+		founddesktop="$(grep -r "${selectiondel}" ${AMDESKTOPDIR} | awk -F ':' '{print $1}')"
+                if [[ -n "$founddesktop" ]]; then
+		    [[ "$verbose" -eq 1 ]] && echo "Found .desktop files: $(printf '%s, ' ${founddesktop[@]})"
+		    for desktopfile in ${founddesktop}
+		    do
+			[[ -f $desktopfile && -n $desktopfile ]] && rm $desktopfile
+			[[ "$verbose" -eq 1 ]] && echo "Deleted AppImage .desktop file"
+		    done;
+		fi
 		foundicon="$(find ${APPIMAGEICONDIR} -type f -iname "${amname}*")"
                 [[ -n $foundicon ]] && rm $foundicon || echo "No icon was found."
                 [[ "$verbose" -eq 1 ]] && echo "Deleted icon"
@@ -134,7 +144,7 @@ amdelete() {
 amlist() {
     if [[ -n $(\ls ${APPIMAGEDIR}) ]]; then
 	echo "$(tput setaf 6 bold) AppImages currently installed:$(tput sgr0)"
-	tree ${APPIMAGEDIR} | grep -e '├' -e '└' --color=never
+	tree ${APPIMAGEDIR} -P '*.AppImage' --prune --noreport | sed '1d'
     else
 	echo "$(tput setaf 1 bold) No AppImages were found.$(tput sgr0)"
     fi
