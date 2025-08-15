@@ -8,7 +8,7 @@
 # The user is advised to check for viruses in every AppImage they download and only download from reputable sources and not from a random GitHub page.
 # The user may need to edit manually the .desktop file in case of any errors.
 
-set -euo pipefail
+#set -euo pipefail
 
 ## Variables
 FMENU="fzf --layout=reverse \
@@ -46,16 +46,18 @@ amintegrate() {
 	# Check if selection is an AppImage
 	amformat=$(file "${selection}" | awk -F ',' '{print $1}' | sed "s#${selection}: ##")
 	case $amformat in
-	    "ELF 64-bit LSB pie executable"|"ELF 64-bit LSB executable")
-                echo "This file is an AppImage."
+	    #"ELF 64-bit LSB pie executable"|"ELF 64-bit LSB executable")
+	    "ELF"*"LSB pie executable"|"ELF"*"LSB executable")
+                [[ "$verbose" -eq 1 ]] && echo "This file is an AppImage."
                 ;;
 	    *)
                 echo "This file is not an AppImage."
                 exit 1
                 ;;
-    esac
+	esac
 	chmod +x "$selection"
-	amname="$(basename "$selection" | tr 'A-Z' 'a-z' | awk -F '-' '{print $1}' | sed 's#.AppImage##I')"
+	amname="$(basename "$selection" | tr 'A-Z' 'a-z' | awk -F '[_-]' '{print $1}' | sed 's#.AppImage##I')"
+	[[ "$verbose" -eq 1 ]] && echo "AppImage name is: ${amname}"
 	amlocation="${APPIMAGEDIR}${amname}.AppImage"
 	mv -i "${selection}" ${amlocation}
 	
@@ -64,6 +66,18 @@ amintegrate() {
 	## AppImage Icon
 	if [[ -n "$(readlink -f squashfs-root/.DirIcon)" ]]; then
 	    icon="$(readlink -f squashfs-root/.DirIcon)"
+	    [[ "$verbose" -eq 1 ]] && echo "Found icon as $icon"
+
+	    iconfmt="$(file ${icon} | awk '{print $2}' | tr 'A-Z' 'a-z')"
+	    [[ "$verbose" -eq 1 ]] && echo "Icon format is: $iconfmt"
+
+	    cp -i ${icon} ${APPIMAGEICONDIR}${amname}.${iconfmt} || echo "Could not copy icon file"
+	    [[ "$verbose" -eq 1 ]] && echo "Copied icon file to $HOME/Applications/.icons"
+    
+	    amicon="$(find ${APPIMAGEICONDIR} -type f -iname "*${amname}*")"
+	    
+	elif [[ -n $(find squashfs-root -maxdepth 1 -type f -iname "${amname}.*") ]]; then
+	    icon="$(find squashfs-root -maxdepth 1 -type f -iname "${amname}.*")"
 	    [[ "$verbose" -eq 1 ]] && echo "Found icon as $icon"
 
 	    iconfmt="$(file ${icon} | awk '{print $2}' | tr 'A-Z' 'a-z')"
@@ -127,9 +141,12 @@ amdelete() {
 		    done;
 		fi
 		foundicon="$(find ${APPIMAGEICONDIR} -type f -iname "${amname}*")"
-                [[ -n $foundicon ]] && rm $foundicon || echo "No icon was found."
-                [[ "$verbose" -eq 1 ]] && echo "Deleted icon"
-
+                if [[ -n $foundicon ]]; then
+                    rm $foundicon
+                    [[ "$verbose" -eq 1 ]] && echo "Deleted icon"
+		else
+		    echo "No icon was found."
+		fi
                 tput setaf 1 bold
                 echo " ${selectiondel} was uninstalled."
                 tput sgr0
@@ -157,9 +174,11 @@ amedit() {
                 echo "To override this run fzam like this: \$ EDITOR=PROGRAM fzam"
                 touch $HOME/.cache/fzam-edit
         fi
-        choice=$(grep -r -m 1 "\.AppImage" $AMDESKTOPDIR | sort | awk -F ":" '{print $1}' | ${FMENU} "Choose an AppImage entry to edit.")
+        choice=$(grep -r -m 1 "\.AppImage" $AMDESKTOPDIR | sort | awk -F ":" '{print $1}' | ${FMENU} "Choose an AppImage entry to edit: ")
         if [ -n $choice ]; then
                 $EDITOR $choice
+	else
+	        exit 0
         fi
 }
 
