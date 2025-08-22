@@ -1,5 +1,4 @@
-* FZAM | Fuzzy AppImage Manager
-
+#+TITLE: FZAM | Fuzzy AppImage Manager 
 [[./screenshot.png]]
 
 *WARNING: I am not responsible for any AppImage that is integrated to the system using fzam and it is malware.*
@@ -11,8 +10,6 @@ file to launch the AppImage and use its icon.
 
 By default the AppImage, its icon and its desktop entry are moved into predefined locations (*~/Applications*, *~/Applications/.icons* and *~/.local/share/applications* respectively), and those locations can be changed in the script by the user.
 
-Note that the user might need to edit the desktop entry of the AppImage in case of any errors.
-
 * Depedencies
 - fzf
 - xargs
@@ -21,6 +18,19 @@ Note that the user might need to edit the desktop entry of the AppImage in case 
 
 * Installation
 Simply download the script from the repository, make the script executable (chmod +x fzam) and place it somewhere on your system. (For example ~/.local/bin)
+
+* FAQ
+** I cannot launch the AppImage through my desktop's menu.
+Fzam changes the arguments in the Exec= line in the AppImage's .desktop file through pattern matching with sed. So a lot of times this line points to a file that does not exist.
+To fix that simply open the .desktop file of the AppImage (the script places it in ~/.local/share/applications) with a text editor (or through the fzam menu) and change the Exec line to point to the AppImage location.
+
+So for LibreOffice for example it would be:
+#+begin_example
+Change Exec=~/Applications/libreoffice.AppImage25.2 %U (invalid) to: Exec=~/Applications/libreoffice.AppImage %U
+#+end_example
+
+** Fzam uses a wrong name for AppImage.
+Simply change the AppImage's filename and its icon filename to the one you want. After that change the .desktop file to point to the right icon and AppImage (in the Icon= and Exec= lines respectively).
 
 * Features
 - Integrate AppImages

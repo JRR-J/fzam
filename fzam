@@ -2,6 +2,7 @@
 
 # FZAM - Fuzzy AppImage Manager | Manage AppImages on Linux.
 # Depedencies: fzf, file, tree
+# GitHub: https://github.com/JRR-J/fzam
 # LICENSE: GNU General Public License v3.
 
 # NOTE: The script and / or the author of the script do not take responsibility for any malware distributed as an AppImage.
@@ -46,7 +47,6 @@ amintegrate() {
 	# Check if selection is an AppImage
 	amformat=$(file "${selection}" | awk -F ',' '{print $1}' | sed "s#${selection}: ##")
 	case $amformat in
-	    #"ELF 64-bit LSB pie executable"|"ELF 64-bit LSB executable")
 	    "ELF"*"LSB pie executable"|"ELF"*"LSB executable")
                 [[ "$verbose" -eq 1 ]] && echo "This file is an AppImage."
                 ;;
@@ -223,9 +223,9 @@ _help() {
     cat <<EOF
 Description: Manage AppImages on Linux.
 Usage: fzam [options]
+       -d, --debug    Start fzam with verbose messages enabled. Useful for identifying problems with AppImage installation.
        -h, --help     Display this help and exit.
        -l, --list     List all installed AppImages. Can be done through the fzam menu too.
-       -V, --verbose  Start fzam with verbose messages enabled. Useful for identifying problems with AppImage installation.
        -v, --version  Output version information and exit.
 EOF
 }
