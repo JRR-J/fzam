@@ -8,7 +8,7 @@ FZAM is a bash script that lets the user integrate their AppImages to their desk
 When the user selects an AppImage, fzam extracts the .desktop file from the root of the AppImage, together with its icon (.DirIcon) and make the required changes to the .desktop
 file to launch the AppImage and use its icon. 
 
-By default the AppImage, its icon and its desktop entry are moved into predefined locations (*~/Applications*, *~/Applications/.icons* and *~/.local/share/applications* respectively), and those locations can be changed in the script by the user.
+By default the AppImage, its icon and its desktop entry are moved into predefined locations which the user can change simply by altering some variables in the script.
 
 * Depedencies
 - fzf
