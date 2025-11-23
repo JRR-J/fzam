@@ -86,11 +86,11 @@ amintegrate() {
 	# Move icon to XDG-compliant directory.
 	if [[ "$iconfmt" == "png" ]]; then
 	    iconsize="$(file ${icon} | awk '{print $5}')"
-	    [[ ! -d "$APPIMAGEICONDIR/${iconsize}x${iconsize}/apps" ]] && mkdir "${APPIMAGEICONDIR}/${iconsize}x${iconsize}/apps"
+	    [[ ! -d "$APPIMAGEICONDIR/${iconsize}x${iconsize}/apps" ]] && mkdir -p "${APPIMAGEICONDIR}/${iconsize}x${iconsize}/apps"
 	    cp -i "${icon}" "${APPIMAGEICONDIR}/${iconsize}x${iconsize}/apps/${amname}.${iconfmt}" || echo "Could not copy icon file."
 	    [[ "$verbose" -eq 1 ]] && echo "Copied icon file to ${APPIMAGEICONDIR}/${iconsize}x${iconsize}/apps"
 	elif [[ "$iconfmt" == "svg" ]]; then
-	    [[ ! -d "$APPIMAGEICONDIR/scalable/apps" ]] && mkdir "${APPIMAGEICONDIR}/scalable/apps"
+	    [[ ! -d "$APPIMAGEICONDIR/scalable/apps" ]] && mkdir -p "${APPIMAGEICONDIR}/scalable/apps"
 	    cp -i "${icon}" "${APPIMAGEICONDIR}/scalable/apps/${amname}.${iconfmt}" || echo "Could not copy icon file."
 	    [[ "$verbose" -eq 1 ]] && echo "Copied icon file to ${APPIMAGEICONDIR}/scalable/apps"
 	fi
@@ -192,15 +192,15 @@ amedit() {
 _checks() {
     if [ ! -d "$APPIMAGEDIR" ]; then
 	echo "$APPIMAGEDIR directory does not exist. Creating it."
-	mkdir "$APPIMAGEDIR"
+	mkdir -p "$APPIMAGEDIR"
     fi
     if [ ! -d "$APPIMAGEICONDIR" ]; then
 	echo "$APPIMAGEICONDIR directory does not exist. Creating it."
-	mkdir "$APPIMAGEICONDIR"
+	mkdir -p "$APPIMAGEICONDIR"
     fi
     if [ ! -d "$AMDESKTOPDIR" ]; then
 	echo "$AMDESKTOPDIR directory does not exist. Creating it."
-	mkdir "$AMDESKTOPDIR"
+	mkdir -p "$AMDESKTOPDIR"
     fi
     if ! grep -q /home/john/Applications <<< "$PATH"; then
 	echo "$HOME/Applications is not set in the PATH variable."
