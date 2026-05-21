@@ -9,6 +9,8 @@
 # The user is advised to check for viruses in every AppImage they download and only download from reputable sources and not from a random GitHub page.
 # The user may need to edit manually the .desktop file in case of any errors.
 
+set -eu
+
 ## Variables
 FMENU="fzf --layout=reverse \
            --exact \
@@ -29,11 +31,11 @@ FMENU="fzf --layout=reverse \
 APPIMAGEDIR="$HOME/Applications/"
 
 # Directory where icons are placed
-APPIMAGEICONDIR="$HOME/.local/share/icons/hicolor"
+APPIMAGEICONDIR="$HOME/.local/share/icons/hicolor/"
 
 # Directory where desktop entries are placed in order for desktop environments to find them.
-# I recommend ~/.local/share/applications for a single user and /usr/local/share/applications for every user of the system.
-AMDESKTOPDIR="$HOME/.local/share/applications/" 
+# I recommend ~/.local/share/applications
+APPIMAGEDESKTOPDIR="$HOME/.local/share/applications/" 
 verbose=0
 
 ## Functions ##
@@ -94,6 +96,10 @@ amintegrate() {
 	    cp -i "${icon}" "${APPIMAGEICONDIR}/scalable/apps/${amname}.${iconfmt}" || echo "Could not copy icon file."
 	    [[ "$verbose" -eq 1 ]] && echo "Copied icon file to ${APPIMAGEICONDIR}/scalable/apps"
 	fi
+	
+	# Update icon cache.
+	[[ ! -f "$APPIMAGEICONDIR/index.theme" ]] && [[ -f "/usr/share/icons/hicolor/index.theme" ]] && cp "/usr/share/icons/hicolor/index.theme" "$APPIMAGEICONDIR/index.theme"
+	command -v gtk-update-icon-cache > /dev/null && gtk-update-icon-cache "$APPIMAGEICONDIR" || echo "gtk-update-icon-cache is not installed. Please install it or log out of the session in order for your desktop environment to reload the application icons."
 
 	## AppImage .desktop file
 	finddesktop="$(find ./squashfs-root/ -maxdepth 1 -iname "*.desktop" | xargs -I {} readlink -f {})"
@@ -106,8 +112,8 @@ amintegrate() {
 	    sed -i "/Icon/s#=.*#=${amname}#I" "$desktopfile"
 	    [[ "$verbose" -eq 1 ]] && echo "All sed substitutions were done."
 	    
-	    cp -i "${desktopfile}" "$AMDESKTOPDIR" || echo "Could not copy .desktop file"
-	    [[ "$verbose" -eq 1 ]] && echo "Copied .desktop file to $AMDESKTOPDIR"
+	    cp -i "${desktopfile}" "$APPIMAGEDESKTOPDIR" || echo "Could not copy .desktop file"
+	    [[ "$verbose" -eq 1 ]] && echo "Copied .desktop file to $APPIMAGEDESKTOPDIR"
 	done
 	
 	[[ -d "./squashfs-root" ]] && rm -rf squashfs-root
@@ -135,7 +141,7 @@ amdelete() {
                 rm "${APPIMAGEDIR}${selectiondel}" || echo "${selectiondel} was not found."
                 [[ "$verbose" -eq 1 ]] && echo "Deleted AppImage: ${selectiondel}"
 
-		founddesktop="$(grep -r "${selectiondel}" "${AMDESKTOPDIR}" | awk -F ':' '{print $1}')"
+		founddesktop="$(grep -r "${selectiondel}" "${APPIMAGEDESKTOPDIR}" | awk -F ':' '{print $1}')"
                 if [[ -n "$founddesktop" ]]; then
 		    [[ "$verbose" -eq 1 ]] && echo "Found .desktop files: $(printf '%s, ' "${founddesktop[@]}")"
 		    for desktopfile in ${founddesktop}
@@ -180,7 +186,7 @@ amedit() {
                 echo "To override this run fzam like this: \$ EDITOR=PROGRAM fzam"
                 touch ~/.cache/fzam-edit
         fi
-        choice=$(grep -r -m 1 "\.AppImage" "${AMDESKTOPDIR}" | sort | awk -F ":" '{print $1}' | ${FMENU} "Choose an AppImage entry to edit: ")
+        choice=$(grep -r -m 1 "\.AppImage" "${APPIMAGEDESKTOPDIR}" | sort | awk -F ":" '{print $1}' | ${FMENU} "Choose an AppImage entry to edit: ")
         if [[ -n $choice ]]; then
                 $EDITOR "${choice}"
 	else
@@ -198,9 +204,9 @@ _checks() {
 	echo "$APPIMAGEICONDIR directory does not exist. Creating it."
 	mkdir -p "$APPIMAGEICONDIR"
     fi
-    if [ ! -d "$AMDESKTOPDIR" ]; then
-	echo "$AMDESKTOPDIR directory does not exist. Creating it."
-	mkdir -p "$AMDESKTOPDIR"
+    if [ ! -d "$APPIMAGEDESKTOPDIR" ]; then
+	echo "$APPIMAGEDESKTOPDIR directory does not exist. Creating it."
+	mkdir -p "$APPIMAGEDESKTOPDIR"
     fi
     if ! grep -q /home/john/Applications <<< "$PATH"; then
 	echo "$HOME/Applications is not set in the PATH variable."

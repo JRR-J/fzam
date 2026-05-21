@@ -1,7 +1,7 @@
 #+TITLE: FZAM | Fuzzy AppImage Manager 
 [[./screenshot.png]]
 
-*WARNING: I am not responsible for any AppImage that is integrated to the system using fzam and it is malware.*
+*WARNING: I am not responsible for any AppImage that is integrated to the system using fzam and it is malware. The user is advised to check for the security of the AppImages they download.*
 
 FZAM is a bash script that lets the user integrate their AppImages to their desktop environment easily. It uses [[https://github.com/junegunn/fzf][fzf]] as its interface.
 
@@ -17,20 +17,27 @@ By default the AppImage, its icon and its desktop entry are moved into predefine
 - tree (Same reason as above)
 
 * Installation
-Simply download the script from the repository, make the script executable (chmod +x fzam) and place it somewhere on your system. (For example ~/.local/bin)
-
+Download it directly from the GitHub repo [[https://raw.githubusercontent.com/JRR-J/fzam/refs/heads/main/fzam][here]], make the script executable (chmod +x fzam) and place it somewhere in your PATH (for example ~/.local/bin or /usr/local/bin)
 * FAQ
-** I cannot launch the AppImage through my desktop's menu.
+** FZAM takes a long time to find my AppImages
+This is intentional because for portability reasons I use the system core utilites (find, grep, sed) and not any replacements which are faster (like fd) so that you can use fzam right away on your Linux distribution without needing to install a lot of 3rd party tools.
+
+** I cannot launch the AppImage through my desktop's menu or it does not show up at all.
 Fzam changes the arguments in the Exec= line in the AppImage's .desktop file through pattern matching with sed. So a lot of times this line points to a file that does not exist.
 To fix that simply open the .desktop file of the AppImage (the script places it in ~/.local/share/applications) with a text editor (or through the fzam menu) and change the Exec line to point to the AppImage location.
+Also some .desktop files have the line DBusActivatable=true which for some reason does not launch the applications. You can set it to false.
 
-So for LibreOffice for example it would be:
-#+begin_example
-Change Exec=~/Applications/libreoffice.AppImage25.2 %U (invalid) to: Exec=~/Applications/libreoffice.AppImage %U
-#+end_example
+For example LibreOffice:
+Exec=/usr/bin//~/Applications/libreoffice.AppImage25.2 %U (invalid) -> Exec=~/Applications/libreoffice.AppImage %U (correct)
 
 ** Fzam uses a wrong name for AppImage.
 Simply change the AppImage's filename and its icon filename to the one you want. After that change the .desktop file to point to the right icon and AppImage (in the Icon= and Exec= lines respectively).
+
+** The last commit was x months ago
+The truth is that fzam is a fairly simple and small project so there is not much that needs to be changed. I call it feature-complete and I do not plan to add new features to it at this moment. It is not unmaintained, just complete.
+
+** Is it vibe-coded?
+No I have written every line by myself.
 
 * Features
 - Integrate AppImages
