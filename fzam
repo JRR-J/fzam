@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 
 # FZAM - Fuzzy AppImage Manager | Manage AppImages on Linux.
-# Depedencies: fzf, file, tree
+# Depedencies: fzf, file, tree, gtk-update-icon-cache
 # GitHub: https://github.com/JRR-J/fzam
 # LICENSE: GNU General Public License v3.
 
@@ -9,20 +9,25 @@
 # The user is advised to check for viruses in every AppImage they download and only download from reputable sources and not from a random GitHub page.
 # The user may need to edit manually the .desktop file in case of any errors.
 
-set -eu
+#set -eu
 
 ## Variables
-FMENU="fzf --layout=reverse \
-           --exact \
-           --border=bold \
-           --border=rounded \
-           --margin=5% \
-           --multi \
-           --color=dark \
-           --height=95% \
-           --info=hidden \
-           --bind change:top \
-           --prompt"
+FMENU=(
+    fzf 
+    --layout=reverse \
+    --exact \
+    --border=bold \
+    --border=rounded \
+    --margin=5% \
+    --multi \
+    --color=dark \
+    --height=95% \
+    --info=hidden \
+    --bind change:top \
+    --bind enter:accept-or-print-query \
+    --footer="FZAM | Fuzzy AppImage Manager v1.0" \
+    --prompt
+)
 
 # Directories. A slash (/) at the end of every variable here is very important.
 # Not having one will break the script.
@@ -42,7 +47,7 @@ verbose=0
 
 # Install / Integrate AppImage function.
 amintegrate() {
-    selection=$(find "$HOME" \( -path "${APPIMAGEDIR::-1}" -o -path ~/.local/share/Trash -o -path ~/.cache \) -prune -o -type f -iname "*.AppImage" -print | ${FMENU} "Please type the location of the AppImage: ") 
+    selection="$(find "$HOME" \( -path "${APPIMAGEDIR::-1}" -o -path ~/.local/share/Trash -o -path ~/.cache \) -prune -o -type f -iname "*.AppImage" -print | "${FMENU[@]}" "Please type the location of the AppImage: ")"
     if [ -n "$selection" ]; then
 	## AppImage
 	
@@ -99,7 +104,7 @@ amintegrate() {
 	
 	# Update icon cache.
 	[[ ! -f "$APPIMAGEICONDIR/index.theme" ]] && [[ -f "/usr/share/icons/hicolor/index.theme" ]] && cp "/usr/share/icons/hicolor/index.theme" "$APPIMAGEICONDIR/index.theme"
-	command -v gtk-update-icon-cache > /dev/null && gtk-update-icon-cache "$APPIMAGEICONDIR" || echo "gtk-update-icon-cache is not installed. Please install it or log out of the session in order for your desktop environment to reload the application icons."
+	command -v gtk-update-icon-cache > /dev/null && gtk-update-icon-cache -f "$APPIMAGEICONDIR" || echo "gtk-update-icon-cache is not installed. Please install it or log out of the session in order for your desktop environment to reload the application icons."
 
 	## AppImage .desktop file
 	finddesktop="$(find ./squashfs-root/ -maxdepth 1 -iname "*.desktop" | xargs -I {} readlink -f {})"
@@ -129,53 +134,65 @@ amintegrate() {
 amdelete() {
     selectiondel=""
     if [[ -d "${APPIMAGEDIR}" ]] && [[ -d "${APPIMAGEICONDIR}" ]]; then
-        selectiondel="$(printf '%s\n' "$(find "${APPIMAGEDIR}" -type f -iname "*.AppImage" | xargs -I {} basename {} | sort)" | ${FMENU} "Choose an AppImage to remove: ")"
-        amname="$(basename -s AppImage "${selectiondel}")"
+        selectiondel="$(find "${APPIMAGEDIR}" -type f -iname "*.AppImage" -printf '%f\n' | sort | "${FMENU[@]}" "Choose an AppImage to remove: ")"
+	if [[ -n "${selectiondel}" ]]; then
+	    if [[ -f "${APPIMAGEDIR}${selectiondel}" ]]; then
+		amname="$(basename -s AppImage "${selectiondel}")"
+		tput setaf 1 bold
+		read -p "${selectiondel} will be uninstalled. Are you sure? [y/N] "
+		tput sgr0
+		if [[ $REPLY =~ ^[Yy] ]]; then
+		    [[ "$verbose" -eq 1 ]] && echo "AppImage to be deleted: ${selectiondel}"
 
-        tput setaf 1 bold
-        read -p "${selectiondel} will be uninstalled. Are you sure? [y/N] "
-        tput sgr0
-            if [[ $REPLY =~ ^[Yy] ]]; then
-                [[ "$verbose" -eq 1 ]] && echo "AppImage to be deleted: ${selectiondel}"
+		    rm "${APPIMAGEDIR}${selectiondel}" || echo "${selectiondel} was not found."
+		    [[ "$verbose" -eq 1 ]] && echo "Deleted AppImage: ${selectiondel}"
 
-                rm "${APPIMAGEDIR}${selectiondel}" || echo "${selectiondel} was not found."
-                [[ "$verbose" -eq 1 ]] && echo "Deleted AppImage: ${selectiondel}"
-
-		founddesktop="$(grep -r "${selectiondel}" "${APPIMAGEDESKTOPDIR}" | awk -F ':' '{print $1}')"
-                if [[ -n "$founddesktop" ]]; then
-		    [[ "$verbose" -eq 1 ]] && echo "Found .desktop files: $(printf '%s, ' "${founddesktop[@]}")"
-		    for desktopfile in ${founddesktop}
-		    do
-			[[ -f $desktopfile && -n $desktopfile ]] && rm "$desktopfile"
-			[[ "$verbose" -eq 1 ]] && echo "Deleted AppImage .desktop file"
-		    done;
-		fi
-		foundicon="$(find "$APPIMAGEICONDIR" -type f -iname "${amname}*")"
-                if [[ -n "$foundicon" ]]; then
-                    rm "${foundicon}"
-                    [[ "$verbose" -eq 1 ]] && echo "Deleted icon: ${foundicon}"
+		    founddesktop="$(grep -r "${selectiondel}" "${APPIMAGEDESKTOPDIR}" | awk -F ':' '{print $1}')"
+		    if [[ -n "$founddesktop" ]]; then
+			[[ "$verbose" -eq 1 ]] && echo "Found .desktop files: $(paste -sd, - <<< "${founddesktop[@]}")"
+			for desktopfile in ${founddesktop}
+			do
+			    [[ -f $desktopfile && -n $desktopfile ]] && rm "$desktopfile"
+			    [[ "$verbose" -eq 1 ]] && echo "Deleted AppImage .desktop file"
+			done;
+		    fi
+		    foundicon="$(find "$APPIMAGEICONDIR" -type f -iname "${amname}*")"
+		    if [[ -n "$foundicon" ]]; then
+			rm "${foundicon}"
+			[[ "$verbose" -eq 1 ]] && echo "Deleted icon: ${foundicon}"
+		    else
+			echo "No icon was found."
+		    fi
+		    tput setaf 1 bold
+		    echo " ${selectiondel} was uninstalled."
+		    tput sgr0
 		else
-		    echo "No icon was found."
+		    tput setaf 1 bold
+		    echo "Operation canceled"
+		    tput sgr0
 		fi
-                tput setaf 1 bold
-                echo " ${selectiondel} was uninstalled."
-                tput sgr0
-            else
-                echo "Operation canceled" && exit 0
-            fi
+	    else
+		tput setaf 1 bold
+		echo "AppImage: ${selectiondel} was not found."
+		tput sgr0
+	    fi
+	fi
     else
-        echo "$(tput setaf 1 bold) No AppImages were found.$(tput sgr0)"
+        tput setaf 1 bold
+	echo " No AppImages were found."
+	tput sgr0
     fi
 }
 
 # List installed AppImages.
 amlist() {
     if [[ -d "${APPIMAGEDIR}" ]]; then
-	echo "$(tput setaf 6 bold) AppImages currently installed:$(tput sgr0)"
+	echo "$(tput setaf 6 bold)󰏖 AppImages currently installed:$(tput sgr0)"
 	tree "${APPIMAGEDIR}" -P '*.AppImage' --prune --noreport | sed '1d'
     else
 	echo "$(tput setaf 1 bold) No AppImages were found.$(tput sgr0)"
     fi
+    tput setaf 4 bold; read -p 'Press any key to continue...' -n 1; tput sgr0
 }
 
 # Edit AppImage desktop entry (.desktop file).
@@ -186,11 +203,9 @@ amedit() {
                 echo "To override this run fzam like this: \$ EDITOR=PROGRAM fzam"
                 touch ~/.cache/fzam-edit
         fi
-        choice=$(grep -r -m 1 "\.AppImage" "${APPIMAGEDESKTOPDIR}" | sort | awk -F ":" '{print $1}' | ${FMENU} "Choose an AppImage entry to edit: ")
+        choice="$(grep -r -m 1 "\.AppImage" "${APPIMAGEDESKTOPDIR}" | sort | awk -F ":" '{print $1}' | "${FMENU[@]}" "Choose an AppImage entry to edit: ")"
         if [[ -n $choice ]]; then
                 $EDITOR "${choice}"
-	else
-	        exit 0
         fi
 }
 
@@ -242,17 +257,14 @@ EOF
 
 # This function executes whether the script runs with the -d flag or not.
 _maincmd() {
-    tput setaf 3 bold
-    echo "What would you like to do?"
-    tput sgr0
     options=(
 	"Install/Integrate an AppImage"
 	"Delete an AppImage"
-	"Edit an AppImage entry"
-	"List installed AppImages"
+	"Edit an AppImage Desktop Entry"
+	"List Installed AppImages"
 	"Quit"
     )
-    choice=$(printf '%s\n' "${options[@]}" | ${FMENU} "")
+    choice="$(printf '%s\n' "${options[@]}" | "${FMENU[@]}" "What would you like to do? ")"
     case $choice in
 	"${options[0]}")
 		amintegrate
@@ -267,9 +279,11 @@ _maincmd() {
 		amlist
 		;;
 	"${options[4]}")
-		echo "Program Terminated" && exit 0
+	        tput setaf 3 bold; echo "Bye Bye!" && exit 0; tput sgr0
 		;;
     esac
+    sleep 0.2
+    _maincmd
 }
 
 # Main Function.
@@ -277,6 +291,10 @@ main() {
     _checks
     
     if [ "$#" -eq 0 ]; then
+	tput setaf 3 bold
+	echo "FZAM | Fuzzy AppImage Manager v1.0"
+	echo "Manage AppImages on Linux."
+	tput sgr0
 	_maincmd
     else
 	case "$1" in
@@ -288,12 +306,17 @@ main() {
 		;;
 	    -d | --debug)
 		verbose=1
+		tput setaf 3 bold
+		echo "FZAM | Fuzzy AppImage Manager v1.0"
+		echo "Manage AppImages on Linux."
+		tput setaf 6 bold
 		echo "Running in debug / verbose mode."
+		tput sgr0
 		_maincmd
 		;;
 	    -v | --version)
-        echo "FZAM | Fuzzy AppImage Manager v0.1"
-        echo "Homepage: https://github.com/JRR-J/fzam"
+		echo "FZAM | Fuzzy AppImage Manager v1.0"
+		echo "Homepage: https://github.com/JRR-J/fzam"
 		;;
 	    *)
 		echo "Unknown argument: $1"
