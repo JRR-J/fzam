@@ -22,15 +22,15 @@ Download it directly from the GitHub repo [[https://raw.githubusercontent.com/JR
 * Frequently Asked Questions
 ** I cannot launch the AppImage through my desktop's menu or it does not show up at all.
 Check out these fixes:
-+ FZAM changes the arguments in the Exec= line in the AppImage's .desktop file through pattern matching with sed. So a lot of times this line points to a file that does not exist.
-  To fix that simply open the .desktop file of the AppImage (by default the script places it in ~~/.local/share/applications~) with a text editor (or through the FZAM menu) and change the Exec line to point to the AppImage location.
++ FZAM changes the arguments in the =Exec== line in the AppImage's .desktop file through pattern matching with sed. So a lot of times this line points to a file that does not exist.
+  To fix that simply open the .desktop file of the AppImage (by default the script places it in =~/.local/share/applications=) with a text editor (or through the FZAM menu) and change the Exec line to point to the AppImage location.
 
   For example for LibreOffice: \\
-  Change ~Exec=/usr/bin//home/user/Applications/libreoffice.AppImage25.2 %U~ (invalid) to ~Exec=/home/USER/Applications/libreoffice.AppImage %U~ (correct)
+  Change =Exec=/usr/bin//home/user/Applications/libreoffice.AppImage25.2 %U= (invalid) to =Exec=/home/USER/Applications/libreoffice.AppImage %U= (correct)
 
-+ Some .desktop files contain the line ~DBusActivatable=true~ which for some reason does not launch the applications. You can set it to false.
++ Some .desktop files contain the line =DBusActivatable=true= which for some reason does not launch the applications. You can set it to false.
 
-+ FZAM saves the .desktop files in ~~/.local/share/applications~. But some Linux distributions do not include ~~/.local/share~ in the ~XDG_DATA_DIRS~ environment variable so the menu system cannot find it. Edit the ~~/.profile~ to include this line: 
++ FZAM saves the .desktop files in =~/.local/share/applications=. But some Linux distributions do not include =~/.local/share= in the =XDG_DATA_DIRS= environment variable so the menu system cannot find it. Edit the =~/.profile= to include this line: 
   #+begin_src bash
   XDG_DATA_DIRS="$HOME/.local/share:$XDG_DATA_DIRS"
   #+end_src
