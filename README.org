@@ -18,7 +18,15 @@ By default the AppImage, its icon and its desktop entry are moved into predefine
 - gtk-update-icon-cache
 
 * Installation
-Download it directly from the GitHub repo [[https://raw.githubusercontent.com/JRR-J/fzam/refs/heads/main/fzam][here]], make the script executable (chmod +x fzam) and place it somewhere in your PATH (for example ~/.local/bin or /usr/local/bin)
++ Since fzam installs AppImages on the =~/Applications= folder on the user's home directory, it makes sense that fzam is installed on =~/.local/bin= and exists for the local user only. That means that =make install= should not be run with sudo priviledges.
+  #+begin_example
+  git clone https://github.com/sat3llite/fzam
+  cd fzam
+  make install
+  #+end_example
+
++ =make uninstall= will uninstall fzam from the user's system.
+
 * Frequently Asked Questions
 ** I cannot launch the AppImage through my desktop's menu or it does not show up at all.
 Check out these fixes:

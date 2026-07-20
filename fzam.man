@@ -1,0 +1,32 @@
+.TH "fzam" "1" 
+.SH "NAME"
+.PP
+FZAM - Fuzzy AppImage Manager
+.SH "SYNOPSIS"
+.PP
+\fBfzam\fP [-dhlv]
+.SH "DESCRIPTION"
+.PP
+\fBfzam\fP is a Bash script that lets the user manage their AppImages easily. It lets them install / integrate them to their system (so that they show on the Application Menus), delete them and list all installed AppImages. \fBfzf(1)\fP powers its interface.
+
+.PP
+It is similar to projects like \fBAppImageLauncher\fP, \fBGear Lever\fP and \fBAppManager\fP but it features an interactive terminal user interface based on \fBfzf(1)\fP
+.SH "OPTIONS"
+.PP
+\fB-d, --debug\fP    Start fzam with verbose messages enabled. Useful for identifying problems with AppImage installation.
+
+.PP
+\fB-h, --help\fP     Display this help message and exit.
+
+.PP
+\fB-l, --list\fP     List all installed AppImages. Can be done through the fzam menu too.
+
+.PP
+\fB-v, --version\fP  Output version information and exit.
+.SH "AUTHOR"
+.PP
+\fBfzam\fP is maintained by sat3llite 
+.br
+\fBSource Code:\fP \fIhttps://github.com/sat3llite/fzam\fP 
+.br
+\fBReport bugs at:\fP \fIhttps://github.com/sat3llite/fzam/issues\fP

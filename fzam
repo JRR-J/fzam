@@ -2,14 +2,14 @@
 
 # FZAM - Fuzzy AppImage Manager | Manage AppImages on Linux.
 # Depedencies: fzf, file, tree, gtk-update-icon-cache
-# GitHub: https://github.com/JRR-J/fzam
+# GitHub: https://github.com/sat3llite/fzam
 # LICENSE: GNU General Public License v3.
 
 # NOTE: The script and / or the author of the script do not take responsibility for any malware distributed as an AppImage.
 # The user is advised to check for viruses in every AppImage they download and only download from reputable sources and not from a random GitHub page.
 # The user may need to edit manually the .desktop file in case of any errors.
 
-#set -eu
+set -eu
 
 ## Variables
 FMENU=(
@@ -21,7 +21,7 @@ FMENU=(
     --margin=5% \
     --multi \
     --color=dark \
-    --height=95% \
+    --height=92% \
     --info=hidden \
     --bind change:top \
     --bind enter:accept-or-print-query \
@@ -29,25 +29,22 @@ FMENU=(
     --prompt
 )
 
-# Directories. A slash (/) at the end of every variable here is very important.
-# Not having one will break the script.
-
 # Directory where AppImages are placed.
-APPIMAGEDIR="$HOME/Applications/"
+APPIMAGEDIR="$HOME/Applications"
 
 # Directory where icons are placed
-APPIMAGEICONDIR="$HOME/.local/share/icons/hicolor/"
+APPIMAGEICONDIR="$HOME/.local/share/icons/hicolor"
 
 # Directory where desktop entries are placed in order for desktop environments to find them.
-# I recommend ~/.local/share/applications
-APPIMAGEDESKTOPDIR="$HOME/.local/share/applications/" 
+# Recommended: ~/.local/share/applications
+APPIMAGEDESKTOPDIR="$HOME/.local/share/applications" 
 verbose=0
 
 ## Functions ##
 
 # Install / Integrate AppImage function.
 amintegrate() {
-    selection="$(find "$HOME" \( -path "${APPIMAGEDIR::-1}" -o -path ~/.local/share/Trash -o -path ~/.cache \) -prune -o -type f -iname "*.AppImage" -print | "${FMENU[@]}" "Please type the location of the AppImage: ")"
+    selection="$(find "$HOME" \( -path "${APPIMAGEDIR}" -o -path ~/.local/share/Trash -o -path ~/.cache \) -prune -o -type f -iname "*.AppImage" -print | "${FMENU[@]}" "Please type the location of the AppImage: ")"
     if [ -n "$selection" ]; then
 	## AppImage
 	
@@ -65,12 +62,13 @@ amintegrate() {
 	chmod +x "$selection"
 	amname="$(basename "$selection" | tr 'A-Z' 'a-z' | awk -F '[_-]' '{print $1}' | sed 's#.AppImage##I')"
 	[[ "$verbose" -eq 1 ]] && echo "AppImage name is: ${amname}"
-	amlocation="${APPIMAGEDIR}${amname}.AppImage"
+	amlocation="${APPIMAGEDIR}/${amname}.AppImage"
 	mv -i "${selection}" "${amlocation}"
 	
-	${amlocation} --appimage-extract > /dev/null || { echo "This AppImage cannot be extracted."; exit 1; }
+	${amlocation} --appimage-extract &> /dev/null || echo "This AppImage cannot be extracted."
 
 	## AppImage Icon
+	# AppDir Specification: "PNG or SVG icon located in the root directory. Can be used by e.g., thumbnailers, to display application icons rather than a generic filetype symbol. Should be in one of the standard image sizes, e.g., 128x128 or 256x256 pixels."
 	if [[ -n "$(readlink -f squashfs-root/.DirIcon)" ]]; then
 	    icon="$(readlink -f squashfs-root/.DirIcon)"
 	    [[ "$verbose" -eq 1 ]] && echo "Found icon as $icon"
@@ -97,16 +95,17 @@ amintegrate() {
 	    cp -i "${icon}" "${APPIMAGEICONDIR}/${iconsize}x${iconsize}/apps/${amname}.${iconfmt}" || echo "Could not copy icon file."
 	    [[ "$verbose" -eq 1 ]] && echo "Copied icon file to ${APPIMAGEICONDIR}/${iconsize}x${iconsize}/apps"
 	elif [[ "$iconfmt" == "svg" ]]; then
-	    [[ ! -d "$APPIMAGEICONDIR/scalable/apps" ]] && mkdir -p "${APPIMAGEICONDIR}/scalable/apps"
+	    [[ ! -d "${APPIMAGEICONDIR}/scalable/apps" ]] && mkdir -p "${APPIMAGEICONDIR}/scalable/apps"
 	    cp -i "${icon}" "${APPIMAGEICONDIR}/scalable/apps/${amname}.${iconfmt}" || echo "Could not copy icon file."
 	    [[ "$verbose" -eq 1 ]] && echo "Copied icon file to ${APPIMAGEICONDIR}/scalable/apps"
 	fi
 	
 	# Update icon cache.
 	[[ ! -f "$APPIMAGEICONDIR/index.theme" ]] && [[ -f "/usr/share/icons/hicolor/index.theme" ]] && cp "/usr/share/icons/hicolor/index.theme" "$APPIMAGEICONDIR/index.theme"
-	command -v gtk-update-icon-cache > /dev/null && gtk-update-icon-cache -f "$APPIMAGEICONDIR" || echo "gtk-update-icon-cache is not installed. Please install it or log out of the session in order for your desktop environment to reload the application icons."
+	command -v gtk-update-icon-cache > /dev/null && gtk-update-icon-cache -f "$APPIMAGEICONDIR"
 
 	## AppImage .desktop file
+	## AppDir specification: "A desktop file located in the root directory, describing the payload application."
 	finddesktop="$(find ./squashfs-root/ -maxdepth 1 -iname "*.desktop" | xargs -I {} readlink -f {})"
 	for desktopfile in ${finddesktop}
 	do
@@ -130,13 +129,13 @@ amintegrate() {
     fi
 }
 
-# Delete / Uninstall AppImage.
+## Delete / Uninstall AppImage.
 amdelete() {
     selectiondel=""
     if [[ -d "${APPIMAGEDIR}" ]] && [[ -d "${APPIMAGEICONDIR}" ]]; then
         selectiondel="$(find "${APPIMAGEDIR}" -type f -iname "*.AppImage" -printf '%f\n' | sort | "${FMENU[@]}" "Choose an AppImage to remove: ")"
 	if [[ -n "${selectiondel}" ]]; then
-	    if [[ -f "${APPIMAGEDIR}${selectiondel}" ]]; then
+	    if [[ -f "${APPIMAGEDIR}/${selectiondel}" ]]; then
 		amname="$(basename -s AppImage "${selectiondel}")"
 		tput setaf 1 bold
 		read -p "${selectiondel} will be uninstalled. Are you sure? [y/N] "
@@ -144,7 +143,7 @@ amdelete() {
 		if [[ $REPLY =~ ^[Yy] ]]; then
 		    [[ "$verbose" -eq 1 ]] && echo "AppImage to be deleted: ${selectiondel}"
 
-		    rm "${APPIMAGEDIR}${selectiondel}" || echo "${selectiondel} was not found."
+		    rm "${APPIMAGEDIR}/${selectiondel}" || echo "${selectiondel} was not found."
 		    [[ "$verbose" -eq 1 ]] && echo "Deleted AppImage: ${selectiondel}"
 
 		    founddesktop="$(grep -r "${selectiondel}" "${APPIMAGEDESKTOPDIR}" | awk -F ':' '{print $1}')"
@@ -186,7 +185,7 @@ amdelete() {
 
 # List installed AppImages.
 amlist() {
-    if [[ -d "${APPIMAGEDIR}" ]]; then
+    if [[ -d "${APPIMAGEDIR}" ]] && compgen -G "${APPIMAGEDIR}*.AppImage" &> /dev/null; then
 	echo "$(tput setaf 6 bold)󰏖 AppImages currently installed:$(tput sgr0)"
 	tree "${APPIMAGEDIR}" -P '*.AppImage' --prune --noreport | sed '1d'
     else
@@ -205,7 +204,7 @@ amedit() {
         fi
         choice="$(grep -r -m 1 "\.AppImage" "${APPIMAGEDESKTOPDIR}" | sort | awk -F ":" '{print $1}' | "${FMENU[@]}" "Choose an AppImage entry to edit: ")"
         if [[ -n $choice ]]; then
-                $EDITOR "${choice}"
+                "${EDITOR}" "${choice}"
         fi
 }
 
@@ -223,8 +222,8 @@ _checks() {
 	echo "$APPIMAGEDESKTOPDIR directory does not exist. Creating it."
 	mkdir -p "$APPIMAGEDESKTOPDIR"
     fi
-    if ! grep -q /home/john/Applications <<< "$PATH"; then
-	echo "$HOME/Applications is not set in the PATH variable."
+    if ! grep -q "${APPIMAGEDIR}" <<< "$PATH"; then
+	echo "${APPIMAGEDIR} is not set in the PATH variable."
     fi
 
     if ! command -v fzf > /dev/null; then
@@ -249,7 +248,7 @@ _help() {
 Description: Manage AppImages on Linux.
 Usage: fzam [options]
        -d, --debug    Start fzam with verbose messages enabled. Useful for identifying problems with AppImage installation.
-       -h, --help     Display this help and exit.
+       -h, --help     Display this help message and exit.
        -l, --list     List all installed AppImages. Can be done through the fzam menu too.
        -v, --version  Output version information and exit.
 EOF
@@ -279,7 +278,10 @@ _maincmd() {
 		amlist
 		;;
 	"${options[4]}")
-	        tput setaf 3 bold; echo "Bye Bye!" && exit 0; tput sgr0
+	        tput setaf 10 bold
+		echo "Bye Bye!" 
+		tput sgr0
+		exit 0
 		;;
     esac
     sleep 0.2
@@ -289,40 +291,50 @@ _maincmd() {
 # Main Function.
 main() {
     _checks
-    
-    if [ "$#" -eq 0 ]; then
-	tput setaf 3 bold
-	echo "FZAM | Fuzzy AppImage Manager v1.0"
-	echo "Manage AppImages on Linux."
-	tput sgr0
-	_maincmd
-    else
-	case "$1" in
-	    -h | --help)
-		_help
-		;;
-	    -l | --list)
-		amlist
-		;;
-	    -d | --debug)
-		verbose=1
-		tput setaf 3 bold
-		echo "FZAM | Fuzzy AppImage Manager v1.0"
-		echo "Manage AppImages on Linux."
-		tput setaf 6 bold
-		echo "Running in debug / verbose mode."
-		tput sgr0
-		_maincmd
-		;;
-	    -v | --version)
-		echo "FZAM | Fuzzy AppImage Manager v1.0"
-		echo "Homepage: https://github.com/JRR-J/fzam"
-		;;
-	    *)
-		echo "Unknown argument: $1"
-		_help
-		;;
-	esac
-    fi
+    _arg="${1:-}"
+    case "$_arg" in
+	"")
+	    tput setaf 3 bold
+	    echo "FZAM | Fuzzy AppImage Manager v1.0"
+	    echo "Manage AppImages on Linux."
+	    tput sgr0
+	    _maincmd
+	    ;;
+	-h | --help)
+	    _help
+	    ;;
+	-l | --list)
+	    amlist
+	    ;;
+	-d | --debug)
+	    verbose=1
+	    tput setaf 3 bold
+	    echo "FZAM | Fuzzy AppImage Manager v1.0"
+	    echo "Manage AppImages on Linux."
+	    tput sgr0
+	    tput setaf 13 bold
+	    echo "Running in debug / verbose mode."
+	    tput sgr0
+	    _maincmd
+	    ;;
+	-v | --version)
+	    tput setaf 12 bold
+	    cat <<EOF
+ _____ _____   _    __  __ 
+|  ___|__  /  / \  |  \/  |
+| |_    / /  / _ \ | |\/| |
+|  _|  / /_ / ___ \| |  | |
+|_|   /____/_/   \_\_|  |_|
+
+Homepage: https://github.com/sat3llite/fzam
+Report Issues at: https://github.com/sat3llite/fzam
+EOF
+	    tput sgr0
+	    ;;
+	*)
+	    echo "Unknown argument: $1"
+	    _help
+	    ;;
+    esac
 }
 main "$@"
